@@ -12,7 +12,7 @@
 
     #play-button {
       position: absolute;
-      top: 150px;
+      top: 110px;
       left: 50px;
       background: rgb(6,66,113);
       padding-right: 26px;
@@ -99,9 +99,9 @@
     var startDate = new Date("2000-01-01T00:00:00"),
       endDate = new Date("2000-01-01T00:04:07.631830");
 
-    var margin = { top: 20, right: 50, bottom: 0, left: 50 },
+    var margin = { top: 10, right: 50, bottom: 0, left: 50 },
       width = 960 - margin.left - margin.right,
-      height = 1000 - margin.top - margin.bottom;
+      height = 597 - margin.top - margin.bottom;
 
     var svg = d3.select("#vis")
       .append("svg")
@@ -125,16 +125,16 @@
     // Create y-axis scale mapping attendance -> pixels
     var long_scale = d3.scaleLinear()
       .range([margin_plot, width - margin_plot])
-      .domain([-15.5, 5.5]);
+      .domain([-18.6, 6.6]);
 
     // Create y-axis scale mapping attendance -> pixels
     var lat_scale = d3.scaleLinear()
       .range([500 - margin_plot, 200 + margin_plot])
-      .domain([-3.5, 4]);
+      .domain([-6, 3]);
 
     var slider = svg.append("g")
       .attr("class", "slider")
-      .attr("transform", "translate(" + margin.left + "," + 70 + ")");
+      .attr("transform", "translate(" + margin.left + "," + 50 + ")");
 
     slider.append("line")
       .attr("class", "track")
