@@ -1,3 +1,4 @@
 *.txt
 cloud.csv
 traj.csv
+.venv/
