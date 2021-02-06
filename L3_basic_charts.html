@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <style>
+    body {
+      font-family: "avenir next", Arial, sans-serif;
+      font-size: 12px;
+      color: #696969;
+    }
+
+    #play-button {
+      position: absolute;
+      top: 150px;
+      left: 50px;
+      background: rgb(6,66,113);
+      padding-right: 26px;
+      border-radius: 3px;
+      border: none;
+      color: white;
+      margin: 0;
+      padding: 0 12px;
+      width: 60px;
+      cursor: pointer;
+      height: 30px;
+    }
+
+    #play-button:hover {
+      border: none;
+      color: white;
+      background: rgb(72,155,92);
+    }
+
+    .ticks {
+      font-size: 10px;
+      color: rgb(6,66,113);
+    }
+
+    .label {
+      color: rgb(6,66,113);
+    }
+
+    .track,
+    .track-inset,
+    .track-overlay {
+      stroke-linecap: round;
+    }
+
+    .track {
+      stroke: rgb(6,66,113);
+      stroke-opacity: 0.3;
+      stroke-width: 10px;
+      color: rgb(6,66,113); 
+    }
+
+    .track-inset {
+      color: rgb(205,226,240); 
+      stroke-width: 8px;
+    }
+
+    .track-overlay {
+      pointer-events: stroke;
+      stroke-width: 50px;
+      stroke: transparent;
+      cursor: crosshair;
+    }
+
+    .handle {
+      fill: rgb(72,155,92);
+      stroke: rgb(72,155,92);
+      stroke-opacity: 0.5;
+      stroke-width: 1.25px;
+    }
+
+    .observer {
+      fill: rgb(72,155,92);
+      opacity: 1;
+    }
+
+    .location {
+      opacity: 0.4;
+      fill: rgb(70,107,141);
+    }
+
+  </style>
+</head>
+
+<body>
+  <div id="vis">
+    <button id="play-button">Play</button>
+    <!-- <img src="/logo.jpg"></img> -->
+  </div>
+  <script>
+
+    var formatDateIntoYear = d3.timeFormat("%M'%S");
+    var formatDate = d3.timeFormat("%M'%S");
+
+    var startDate = new Date("2000-01-01 00:00:00"),
+      endDate = new Date("2000-01-01 00:04:07.631830");
+
+    var margin = { top: 20, right: 50, bottom: 0, left: 50 },
+      width = 500 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+
+    var svg = d3.select("#vis")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom);
+
+    ////////// slider //////////
+
+    var moving = false;
+    var currentValue = 0;
+    var targetValue = width;
+
+    var playButton = d3.select("#play-button");
+
+    var x = d3.scaleTime()
+      .domain([startDate, endDate])
+      .range([0, targetValue]);
+
+    var margin_plot = 10;
+
+    // Create y-axis scale mapping attendance -> pixels
+    var long_scale = d3.scaleLinear()
+      .range([margin_plot, width - margin_plot])
+      .domain([-16.5, 4.5]);
+
+    // Create y-axis scale mapping attendance -> pixels
+    var lat_scale = d3.scaleLinear()
+      .range([500 - margin_plot, 200 + margin_plot])
+      .domain([-11, 4]);
+
+    var slider = svg.append("g")
+      .attr("class", "slider")
+      .attr("transform", "translate(" + margin.left + "," + 70 + ")");
+
+    slider.append("line")
+      .attr("class", "track")
+      .attr("x1", x.range()[0])
+      .attr("x2", x.range()[1])
+      .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+      .attr("class", "track-inset")
+      .select(function () { return this.parentNode.appendChild(this.cloneNode(true)); })
+      .attr("class", "track-overlay")
+      .call(d3.drag()
+        .on("start.interrupt", function () { slider.interrupt(); })
+        .on("start drag", function () {
+          currentValue = d3.event.x;
+          update(x.invert(currentValue));
+        })
+      );
+
+    slider.insert("g", ".track-overlay")
+      .attr("class", "ticks")
+      .attr("transform", "translate(0," + 18 + ")")
+      .selectAll("text")
+      .data(x.ticks(10))
+      .enter()
+      .append("text")
+      .attr("x", x)
+      .attr("y", 10)
+      .attr("text-anchor", "middle")
+      .text(function (d) { return formatDateIntoYear(d); });
+
+    var handle = slider.insert("circle", ".track-overlay")
+      .attr("class", "handle")
+      .attr("r", 9);
+
+    var label = slider.append("text")
+      .attr("class", "label")
+      .attr("text-anchor", "middle")
+      .text(formatDate(startDate))
+      .attr("transform", "translate(0," + (-25) + ")")
+
+
+    ////////// plot //////////
+
+    var dataset;
+
+    var plot = svg.append("g")
+      .attr("class", "plot")
+      .attr("transform", "translate(" + 0 + "," + 0 + ")");
+    
+    var cursorPlot = svg.append("g")
+      .attr("class", "cursor-plot")
+      .attr("transform", "translate(" + 0 + "," + 0 + ")");
+
+    d3.csv("data/cleaned.csv", prepare, function (data) {
+      dataset = data.sort(function (a, b) { return +a['date'] - b['date'] });
+      drawPlot(dataset.filter(function (d) {
+        return !d['is_observer'];
+      }));
+
+      playButton
+        .on("click", function () {
+          var button = d3.select(this);
+          if (button.text() == "Pause") {
+            moving = false;
+            clearInterval(timer);
+            // timer = 0;
+            button.text("Play");
+          } else {
+            moving = true;
+            timer = setInterval(step, 5);
+            button.text("Pause");
+          }
+          console.log("Slider moving: " + moving);
+        })
+    })
+
+    parseDate = d3.timeParse("%Y-%m-%d %H:%M:%S.%f");
+
+    function prepare(d) {
+      d['date'] = parseDate(d['time']);
+      d['long'] = +d['y'];
+      d['lat'] = -d['x'];
+      d['is_observer'] = d['type'] == 'traj';
+      if (isNaN(d['long']) || isNaN(d['lat'])) {
+        return null;
+      } else {
+        return d;
+      };
+    }
+
+    function step() {
+      update(x.invert(currentValue));
+      currentValue = currentValue + (targetValue / 100);
+      if (currentValue > targetValue) {
+        moving = false;
+        currentValue = 0;
+        clearInterval(timer);
+        timer = 0;
+        playButton.text("Play");
+        console.log("Slider moving: " + moving);
+      }
+    }
+
+    function drawPlot(data) {
+      var locations = plot.selectAll(".location")
+        .data(data);
+
+      // if filtered dataset has more circles than already existing, transition new ones in
+
+      locations.enter()
+        .append("circle")
+        .attr("class", "location")
+        .attr("cx", function (d) {
+          return long_scale(d['long']);
+        })
+        .attr("cy", function (d) {
+          return lat_scale(d['lat']);
+        })
+        .attr("r", 0.7)
+        .transition()
+        .duration(400)
+        .attr("r", 2.5)
+        .transition()
+        .attr("r", 0.7);
+
+      // if filtered dataset has less circles than already existing, remove excess
+      locations.exit()
+        .remove();
+    }
+
+    function drawCursor(data) {  // if filtered dataset has more circles than already existing, transition new ones in
+      if (data.length == 0) {
+        return;
+      };
+
+      var cursor = [data[data.length - 1]]
+
+      var observers = cursorPlot.selectAll(".observer")
+        .data(cursor);
+
+      // if filtered dataset has less circles than already existing, remove excess
+      observers.exit()
+        .remove();
+
+        observers.enter()
+        .append("circle")
+        .attr('class', 'observer')
+        .attr("cx", function (d) {
+          return long_scale(d['long']);
+        })
+        .attr("cy", function (d) {
+          return lat_scale(d['lat']);
+        })
+        .attr("r", 10);
+
+        observers
+        .attr('class', 'observer')
+        .attr("cx", function (d) {
+          return long_scale(d['long']);
+        })
+        .attr("cy", function (d) {
+          return lat_scale(d['lat']);
+        })
+        .attr("r", 10);
+    }
+
+    function update(h) {
+      // update position and text of label according to slider scale
+      handle.attr("cx", x(h));
+      label
+        .attr("x", x(h))
+        .text(formatDate(h));
+
+      // filter data set and redraw plot
+      var newData = dataset.filter(function (d) {
+        return (d['date'] < h) && (!d['is_observer']);
+      });
+
+      // filter data set and redraw plot
+      var newCursorData = dataset.filter(function (d) {
+        return (d['date'] < h) && (d['is_observer']);
+      });
+      drawCursor(newCursorData);
+      drawPlot(newData);
+    }
+
+  </script>
+</body>
