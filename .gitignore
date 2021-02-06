@@ -3,3 +3,5 @@ cloud.csv
 traj.csv
 .venv/**/*
 .venv
+.ipynb_checkpoints/**/*
+.ipynb_checkpoints
