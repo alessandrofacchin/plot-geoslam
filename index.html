@@ -100,7 +100,7 @@
       endDate = new Date("2000-01-01 00:04:07.631830");
 
     var margin = { top: 20, right: 50, bottom: 0, left: 50 },
-      width = 1000 - margin.left - margin.right,
+      width = 960 - margin.left - margin.right,
       height = 1000 - margin.top - margin.bottom;
 
     var svg = d3.select("#vis")
@@ -125,7 +125,7 @@
     // Create y-axis scale mapping attendance -> pixels
     var long_scale = d3.scaleLinear()
       .range([margin_plot, width - margin_plot])
-      .domain([-16.5, 4.5]);
+      .domain([-15.5, 5.5]);
 
     // Create y-axis scale mapping attendance -> pixels
     var lat_scale = d3.scaleLinear()
