@@ -96,8 +96,8 @@
     var formatDateIntoYear = d3.timeFormat("%M'%S");
     var formatDate = d3.timeFormat("%M'%S");
 
-    var startDate = new Date("2000-01-01 00:00:00"),
-      endDate = new Date("2000-01-01 00:04:07.631830");
+    var startDate = new Date("2000-01-01T00:00:00"),
+      endDate = new Date("2000-01-01T00:04:07.631830");
 
     var margin = { top: 20, right: 50, bottom: 0, left: 50 },
       width = 960 - margin.left - margin.right,
@@ -162,7 +162,9 @@
       .attr("x", x)
       .attr("y", 10)
       .attr("text-anchor", "middle")
-      .text(function (d) { return formatDateIntoYear(d); });
+      .text(function (d) { 
+        return formatDateIntoYear(d); 
+      });
 
     var handle = slider.insert("circle", ".track-overlay")
       .attr("class", "handle")
@@ -171,7 +173,9 @@
     var label = slider.append("text")
       .attr("class", "label")
       .attr("text-anchor", "middle")
-      .text(formatDate(startDate))
+      .text(function () { 
+        return formatDate(startDate); 
+      })
       .attr("transform", "translate(0," + (-25) + ")")
 
 
